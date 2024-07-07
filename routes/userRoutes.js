@@ -3,7 +3,7 @@ const multer = require('multer');
 const userController = require('../controllers/userController');
 
 const router = express.Router();
-const upload = multer({ dest: 'uploads/' });
+const upload = require('../utils/storage');
 
 router.post('/signup', upload.array('profilePicUrl', 4), userController.signUp);
 router.post('/checkin', userController.saveUserCheckIn);
