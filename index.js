@@ -13,6 +13,10 @@ app.use(express.json());
 app.use('/api/users', userRoutes);
 app.use('/api/venues', venueRoutes);
 
+app.get('/', (req, res) => {
+    res.send("Hello, world!. This is check-in app's backend");
+  });
+  
 const PORT = process.env.PORT || 5000;
 
 sequelize.sync().then(() => {
