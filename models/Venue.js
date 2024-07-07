@@ -1,3 +1,4 @@
+// models/Venue.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
@@ -7,29 +8,13 @@ const Venue = sequelize.define('Venue', {
     autoIncrement: true,
     primaryKey: true,
   },
-  venueName: {
+  placeId: {
     type: DataTypes.STRING,
+    unique: true,
   },
-  address: {
-    type: DataTypes.STRING,
-  },
-  openTime: {
-    type: DataTypes.STRING,
-  },
-  closedTime: {
-    type: DataTypes.STRING,
-  },
-  category: {
-    type: DataTypes.STRING,
-  },
-  latitude: {
-    type: DataTypes.DOUBLE,
-  },
-  longitude: {
-    type: DataTypes.DOUBLE,
-  },
-  subTitle: {
-    type: DataTypes.STRING,
+  totalCheckIns: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
   },
 });
 

@@ -20,6 +20,7 @@ exports.signUp = async (userData, profilePicFiles) => {
   const user = await User.create({ UId, name, number, description, gender, sex, activeStatus, packageId, date, email, age });
 
   if (profilePicFiles) {
+    console.log("IMages Recieved")
     for (const file of profilePicFiles) {
       const uploadResult = await cloudinary.uploader.upload(file.path);
       await UserPicture.create({ userId: user.id, imageUrl: uploadResult.secure_url });

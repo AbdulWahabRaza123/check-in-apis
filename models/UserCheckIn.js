@@ -1,3 +1,4 @@
+// models/UserCheckIn.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
@@ -9,12 +10,15 @@ const UserCheckIn = sequelize.define('UserCheckIn', {
   },
   userId: {
     type: DataTypes.INTEGER,
+    allowNull: false,
   },
   venueId: {
     type: DataTypes.INTEGER,
+    allowNull: false,
   },
-  interest: {
+  category: {
     type: DataTypes.STRING,
+    allowNull: false,
   },
 });
 

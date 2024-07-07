@@ -8,6 +8,7 @@ var cors = require('cors')
 
 const userRoutes = require('./routes/userRoutes');
 const venueRoutes = require('./routes/venueRoutes');
+const dbRoutes = require('./routes/dbRoutes');
 
 const port = process.env.PORT || 3000;
 const path = require('path');
@@ -24,19 +25,20 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 
 
-app.use('/api/users', userRoutes);
-app.use('/api/venues', venueRoutes);
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/venues', venueRoutes);
+app.use('/api/v1/db', dbRoutes);
 
 
 app.use('/api-docs', express.static('node-modules/swagger-ui-dist/',
     { index: false }), swaggerUi.serve, swaggerUi.setup(specs,{ customCssUrl: CSS_URL }));
-    app.use('/api-docs', express.static(path.join(__dirname, 'swagger-ui')));
-  app.use('/api/v1/user', userRoutes);
+app.use('/api-docs', express.static(path.join(__dirname, 'swagger-ui')));
+app.use('/api/v1/user', userRoutes);
   
 
 app.get('/', (req, res) => {
     res.send("Hello, world!. This is check-in app's backend");
-  });
+});
 
 const PORT = process.env.PORT || 5000;
 
