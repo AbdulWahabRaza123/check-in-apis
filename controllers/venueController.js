@@ -1,4 +1,3 @@
-// controllers/venueController.js
 const Venue = require('../models/Venue');
 const UserCheckIn = require('../models/UserCheckIn');
 const User = require('../models/User');
@@ -28,7 +27,7 @@ const getCategoryCountsAndUsers = async (venueId) => {
     userIds.push(checkIn.userId);
   }
 
-  const users = await User.findAll({ where: { id: userIds }, include: [UserPicture],  });
+  const users = await User.findAll({ where: { id: userIds }, include: [UserPicture] });
 
   return { categoryCounts, users };
 };
@@ -107,22 +106,24 @@ exports.checkInUser = async (req, res) => {
   try {
     const { userId, placeId, category } = req.body;
 
-    // Check if user exists
-    const user = await User.findByPk(userId);
+    // Check if user exists using UId
+    const user = await User.findOne({ where: { UId: userId }, include: [UserPicture] });
     if (!user) {
       return res.status(404).json({ status: false, message: 'User not found' });
     }
 
     // Check if user is already checked in at any venue
-    const previousCheckIn = await UserCheckIn.findOne({ where: { userId } });
+    const previousCheckIn = await UserCheckIn.findOne({ where: { userId: user.id } });
 
     if (previousCheckIn) {
-      // Decrement the total count and category count for the previous venue
+      // Decrement the total count for the previous venue, ensuring it does not go below zero
       const previousVenue = await Venue.findByPk(previousCheckIn.venueId);
-      previousVenue.totalCheckIns -= 1;
+      if (previousVenue.totalCheckIns > 0) {
+        previousVenue.totalCheckIns -= 1;
+      }
       await previousVenue.save();
 
-      await UserCheckIn.destroy({ where: { userId, venueId: previousVenue.venueId } });
+      await UserCheckIn.destroy({ where: { userId: user.id, venueId: previousVenue.venueId } });
     }
 
     let venue = await Venue.findOne({ where: { placeId } });
@@ -132,7 +133,7 @@ exports.checkInUser = async (req, res) => {
       venue = await Venue.create({ placeId, totalCheckIns: 0 });
     }
 
-    await UserCheckIn.create({ userId, venueId: venue.venueId, category });
+    await UserCheckIn.create({ userId: user.id, venueId: venue.venueId, category });
 
     // Increment total check-ins for the venue
     venue.totalCheckIns += 1;
@@ -160,8 +161,8 @@ exports.checkOutUser = async (req, res) => {
   try {
     const { userId, placeId } = req.body;
 
-    // Check if user exists
-    const user = await User.findByPk(userId);
+    // Check if user exists using UId
+    const user = await User.findOne({ where: { UId: userId }, include: [UserPicture] });
     if (!user) {
       return res.status(404).json({ status: false, message: 'User not found' });
     }
@@ -173,17 +174,19 @@ exports.checkOutUser = async (req, res) => {
     }
 
     // Check if user is checked in at the given venue
-    const userCheckIn = await UserCheckIn.findOne({ where: { userId, venueId: venue.venueId } });
+    const userCheckIn = await UserCheckIn.findOne({ where: { userId: user.id, venueId: venue.venueId } });
     if (!userCheckIn) {
       return res.status(409).json({ status: false, message: 'User is not checked in at this venue' });
     }
 
-    // Decrement the total count and category count for the venue
-    venue.totalCheckIns -= 1;
+    // Decrement the total count for the venue, ensuring it does not go below zero
+    if (venue.totalCheckIns > 0) {
+      venue.totalCheckIns -= 1;
+    }
     await venue.save();
 
     // Remove the check-in entry
-    await UserCheckIn.destroy({ where: { userId, venueId: venue.venueId } });
+    await UserCheckIn.destroy({ where: { userId: user.id, venueId: venue.venueId } });
 
     // Fetch updated category counts and users
     const { categoryCounts, users } = await getCategoryCountsAndUsers(venue.venueId);
