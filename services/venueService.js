@@ -36,3 +36,15 @@ exports.checkInUser = async (userId, placeId, category) => {
 
   return venue;
 };
+
+exports.createVenue = async (placeId) => {
+  let venue = await Venue.findOne({ where: { placeId } });
+
+  if (venue) {
+    throw new Error('Venue already exists');
+  }
+
+  venue = await Venue.create({ placeId, totalCheckIns: 0 });
+
+  return venue;
+};

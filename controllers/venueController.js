@@ -1,4 +1,7 @@
+// controllers/venueController.js
 const Venue = require('../models/Venue');
+const UserCheckIn = require('../models/UserCheckIn');
+const User = require('../models/User');
 const cloudinary = require('cloudinary').v2;
 
 cloudinary.config({
@@ -7,46 +10,44 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-
-const getCategoryCounts = async (venueId) => {
+// Utility function to get category counts and checked-in users
+const getCategoryCountsAndUsers = async (venueId) => {
   const categories = ['Friends', 'Networking', 'Dates', 'Food', 'Parties', 'Events', 'Drinks'];
   const categoryCounts = {};
+  const userIds = [];
 
   for (const category of categories) {
     const count = await UserCheckIn.count({ where: { venueId, category } });
     categoryCounts[category] = count;
   }
 
-  return categoryCounts;
+  const userCheckIns = await UserCheckIn.findAll({ where: { venueId } });
+
+  for (const checkIn of userCheckIns) {
+    userIds.push(checkIn.userId);
+  }
+
+  const users = await User.findAll({ where: { id: userIds } });
+
+  return { categoryCounts, users };
 };
 
-
+// Create a new venue
 exports.createVenue = async (req, res) => {
   try {
-    const {
-      venueName,
-      address,
-      openTime,
-      closedTime,
-      category,
-      latitude,
-      longitude,
-      subTitle,
-    } = req.body;
+    const { placeId } = req.body;
 
-    const venue = await Venue.create({
-      venueName,
-      address,
-      openTime,
-      closedTime,
-      category,
-      latitude,
-      longitude,
-      subTitle,
-    });
-    res.status(201).json(venue);
+    let venue = await Venue.findOne({ where: { placeId } });
+
+    if (venue) {
+      return res.status(409).json({ status: false, message: 'Venue already exists' });
+    }
+
+    venue = await Venue.create({ placeId, totalCheckIns: 0 });
+
+    res.status(201).json({ status: true, message: 'Venue created successfully', venue });
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    res.status(500).json({ status: false, message: 'Internal server error', error: error.message });
   }
 };
 
@@ -58,27 +59,41 @@ exports.getVenues = async (req, res) => {
     if (placeid) {
       const venue = await Venue.findOne({ where: { placeId: placeid } });
 
-      if(venue) {
+      if (venue) {
+        const { categoryCounts, users } = await getCategoryCountsAndUsers(venue.venueId);
         return res.status(200).json({
           status: true,
           message: 'Venue exists',
-          venue,
+          venue: {
+            ...venue.dataValues,
+            categoryCounts,
+            users,
+          },
         });
-      }
-      else {
+      } else {
         return res.status(200).json({
           status: false,
           message: 'Venue does not exist',
           venue: [],
         });
       }
-    }
-    else {
+    } else {
       const venues = await Venue.findAll();
+      const venuesWithDetails = await Promise.all(
+        venues.map(async (venue) => {
+          const { categoryCounts, users } = await getCategoryCountsAndUsers(venue.venueId);
+          return {
+            ...venue.dataValues,
+            categoryCounts,
+            users,
+          };
+        })
+      );
+
       return res.status(200).json({
         status: true,
-        message: 'All users fetched successfully',
-        venues,
+        message: 'All venues fetched successfully',
+        venues: venuesWithDetails,
       });
     }
   } catch (error) {
@@ -91,17 +106,29 @@ exports.checkInUser = async (req, res) => {
   try {
     const { userId, placeId, category } = req.body;
 
+    // Check if user exists
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ status: false, message: 'User not found' });
+    }
+
+    // Check if user is already checked in at any venue
+    const previousCheckIn = await UserCheckIn.findOne({ where: { userId } });
+
+    if (previousCheckIn) {
+      // Decrement the total count and category count for the previous venue
+      const previousVenue = await Venue.findByPk(previousCheckIn.venueId);
+      previousVenue.totalCheckIns -= 1;
+      await previousVenue.save();
+
+      await UserCheckIn.destroy({ where: { userId, venueId: previousVenue.venueId } });
+    }
+
     let venue = await Venue.findOne({ where: { placeId } });
 
     if (!venue) {
       // Create new venue if it does not exist
       venue = await Venue.create({ placeId, totalCheckIns: 0 });
-    }
-
-    const existingCheckIn = await UserCheckIn.findOne({ where: { userId, venueId: venue.venueId } });
-
-    if (existingCheckIn) {
-      return res.status(409).json({ message: 'User already checked in' });
     }
 
     await UserCheckIn.create({ userId, venueId: venue.venueId, category });
@@ -110,7 +137,18 @@ exports.checkInUser = async (req, res) => {
     venue.totalCheckIns += 1;
     await venue.save();
 
-    res.status(200).json({ message: 'User checked in successfully' });
+    // Fetch updated category counts and users
+    const { categoryCounts, users } = await getCategoryCountsAndUsers(venue.venueId);
+
+    res.status(200).json({
+      status: true,
+      message: 'User checked in successfully',
+      venue: {
+        ...venue.dataValues,
+        categoryCounts,
+        users,
+      },
+    });
   } catch (error) {
     res.status(500).json({ status: false, message: 'Internal server error', error: error.message });
   }
