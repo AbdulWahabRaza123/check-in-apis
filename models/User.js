@@ -1,5 +1,7 @@
+// models/User.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
+const UserPicture = require('./UserPicture');
 
 const User = sequelize.define('User', {
   id: {
@@ -43,5 +45,8 @@ const User = sequelize.define('User', {
     type: DataTypes.INTEGER,
   },
 });
+
+User.hasMany(UserPicture, { foreignKey: 'userId' });
+UserPicture.belongsTo(User, { foreignKey: 'userId' });
 
 module.exports = User;

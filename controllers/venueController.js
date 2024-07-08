@@ -2,6 +2,7 @@
 const Venue = require('../models/Venue');
 const UserCheckIn = require('../models/UserCheckIn');
 const User = require('../models/User');
+const UserPicture = require('../models/UserPicture');
 const cloudinary = require('cloudinary').v2;
 
 cloudinary.config({
@@ -27,7 +28,7 @@ const getCategoryCountsAndUsers = async (venueId) => {
     userIds.push(checkIn.userId);
   }
 
-  const users = await User.findAll({ where: { id: userIds } });
+  const users = await User.findAll({ where: { id: userIds }, include: [UserPicture],  });
 
   return { categoryCounts, users };
 };
@@ -143,6 +144,53 @@ exports.checkInUser = async (req, res) => {
     res.status(200).json({
       status: true,
       message: 'User checked in successfully',
+      venue: {
+        ...venue.dataValues,
+        categoryCounts,
+        users,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ status: false, message: 'Internal server error', error: error.message });
+  }
+};
+
+// Check out user from venue
+exports.checkOutUser = async (req, res) => {
+  try {
+    const { userId, placeId } = req.body;
+
+    // Check if user exists
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ status: false, message: 'User not found' });
+    }
+
+    // Check if the venue exists
+    const venue = await Venue.findOne({ where: { placeId } });
+    if (!venue) {
+      return res.status(404).json({ status: false, message: 'Venue not found' });
+    }
+
+    // Check if user is checked in at the given venue
+    const userCheckIn = await UserCheckIn.findOne({ where: { userId, venueId: venue.venueId } });
+    if (!userCheckIn) {
+      return res.status(409).json({ status: false, message: 'User is not checked in at this venue' });
+    }
+
+    // Decrement the total count and category count for the venue
+    venue.totalCheckIns -= 1;
+    await venue.save();
+
+    // Remove the check-in entry
+    await UserCheckIn.destroy({ where: { userId, venueId: venue.venueId } });
+
+    // Fetch updated category counts and users
+    const { categoryCounts, users } = await getCategoryCountsAndUsers(venue.venueId);
+
+    res.status(200).json({
+      status: true,
+      message: 'User checked out successfully',
       venue: {
         ...venue.dataValues,
         categoryCounts,

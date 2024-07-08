@@ -1,3 +1,4 @@
+// models/UserPicture.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
@@ -9,9 +10,11 @@ const UserPicture = sequelize.define('UserPicture', {
   },
   userId: {
     type: DataTypes.INTEGER,
+    allowNull: false,
   },
   imageUrl: {
     type: DataTypes.STRING,
+    allowNull: false,
   },
 });
 

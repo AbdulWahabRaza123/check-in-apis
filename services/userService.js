@@ -29,26 +29,3 @@ exports.signUp = async (userData, profilePicFiles) => {
 
   return user;
 };
-
-exports.saveUserCheckIn = async (checkInData) => {
-  const { userId, venueId, interest } = checkInData;
-
-  const venue = await Venue.findByPk(venueId);
-  if (!venue) {
-    throw new Error('Venue not found');
-  }
-
-  const user = await User.findByPk(userId);
-  if (!user) {
-    throw new Error('User not found');
-  }
-
-  const existingCheckIn = await UserCheckIn.findOne({ where: { userId, venueId } });
-  if (existingCheckIn) {
-    throw new Error('User already checked in');
-  }
-
-  const userCheckIn = await UserCheckIn.create({ userId, venueId, interest });
-
-  return userCheckIn;
-};
