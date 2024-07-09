@@ -54,33 +54,44 @@ exports.createVenue = async (req, res) => {
 // Get venue details or all venues
 exports.getVenues = async (req, res) => {
   try {
-    const { placeid } = req.query;
+    let { placeid } = req.query;
+
 
     if (placeid) {
-      const venue = await Venue.findOne({ where: { placeId: placeid } });
+      placeid = placeid.split(",")
+      const venuesWithDetails = [];
 
-      if (venue) {
-        const { categoryCounts, users } = await getCategoryCountsAndUsers(venue.venueId);
-        return res.status(200).json({
-          status: true,
-          message: 'Venue exists',
-          venue: {
+      // Fetch details for each placeid
+      for (const id of placeid) {
+        const venue = await Venue.findOne({ where: { placeId: id } });
+        if (venue) {
+          const { categoryCounts, users } = await getCategoryCountsAndUsers(venue.venueId);
+          venuesWithDetails.push({
             ...venue.dataValues,
             categoryCounts,
             users,
-          },
+          });
+        }
+      }
+
+      if (venuesWithDetails.length > 0) {
+        return res.status(200).json({
+          status: true,
+          message: 'Venues found',
+          venues: venuesWithDetails,
         });
       } else {
         return res.status(200).json({
           status: false,
-          message: 'Venue does not exist',
-          venue: [],
+          message: 'No venues found for the given place IDs',
+          venues: [],
         });
       }
     } else {
-      const venues = await Venue.findAll();
-      const venuesWithDetails = await Promise.all(
-        venues.map(async (venue) => {
+      // If no placeid query parameter is provided, return all venues
+      const allVenues = await Venue.findAll();
+      const allVenuesWithDetails = await Promise.all(
+        allVenues.map(async (venue) => {
           const { categoryCounts, users } = await getCategoryCountsAndUsers(venue.venueId);
           return {
             ...venue.dataValues,
@@ -93,13 +104,16 @@ exports.getVenues = async (req, res) => {
       return res.status(200).json({
         status: true,
         message: 'All venues fetched successfully',
-        venues: venuesWithDetails,
+        venues: allVenuesWithDetails,
       });
     }
   } catch (error) {
+    console.error("Error fetching venues: ", error);
     res.status(500).json({ status: false, message: 'Internal server error', error: error.message });
   }
 };
+
+
 
 // Check in user to venue
 exports.checkInUser = async (req, res) => {
