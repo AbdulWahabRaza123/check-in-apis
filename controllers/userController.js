@@ -66,7 +66,6 @@ exports.signUp = async (req, res) => {
     res.status(500).json({ status: false, message: 'File uploading failed for user', error: error.message });
   }
 };
-
 exports.getUsers = async (req, res) => {
   try {
     const { uid } = req.query;

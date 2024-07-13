@@ -9,6 +9,7 @@ var cors = require('cors')
 const userRoutes = require('./routes/userRoutes');
 const venueRoutes = require('./routes/venueRoutes');
 const dbRoutes = require('./routes/dbRoutes');
+const requestRoutes = require('./routes/requestRoutes');
 
 const port = process.env.PORT || 3000;
 const path = require('path');
@@ -27,6 +28,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/venues', venueRoutes);
+app.use('/api/v1/requests', requestRoutes);
 app.use('/api/v1/db', dbRoutes);
 
 
