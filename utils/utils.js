@@ -1,4 +1,5 @@
 const cloudinary = require('../config/cloudinaryConfig');
+const jwt = require("jsonwebtoken");
 
 // Helper function to upload files to Cloudinary
 const uploadToCloudinary = (file, folder) => {
@@ -13,4 +14,8 @@ const uploadToCloudinary = (file, folder) => {
     });
 };
 
-module.exports = { uploadToCloudinary };
+const generateToken = (email) => {
+    return jwt.sign({email}, process.env.JWT_SECRET);
+}
+
+module.exports = { uploadToCloudinary, generateToken };

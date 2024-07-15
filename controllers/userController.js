@@ -3,8 +3,8 @@ const User = require('../models/User');
 const UserCheckIn = require('../models/UserCheckIn');
 const UserPicture = require('../models/UserPicture');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const cloudinary = require('cloudinary').v2;
+const {generateToken} = require('../utils/utils');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -60,12 +60,15 @@ exports.signUp = async (req, res) => {
       }
     }
 
-    res.status(200).json({ status: true, message: 'User signed up successfully' });
+    const token = generateToken(email);
+
+    res.status(200).json({ status: true, message: 'User signed up successfully', "token": token });
 
   } catch (error) {
     res.status(500).json({ status: false, message: 'File uploading failed for user', error: error.message });
   }
 };
+
 exports.getUsers = async (req, res) => {
   try {
     const { uid } = req.query;

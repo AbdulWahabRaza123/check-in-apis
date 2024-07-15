@@ -1,15 +1,16 @@
 const express = require('express');
 const requestController = require('../controllers/requestController');
 const upload = require('../utils/storage');
+const {authenticateToken} = require('../middleware/verifyToken');
 
 const router = express.Router();
 
-router.post('/sendRequest', upload.none(), requestController.sendRequest);
-router.get('/getRequests', requestController.getRequests);
+router.post('/sendRequest', upload.none(), authenticateToken, requestController.sendRequest);
+router.get('/getRequests', authenticateToken,requestController.getRequests);
 
-router.put('/acceptRequest', upload.none(), requestController.acceptRequest);
-router.put('/rejectRequest', upload.none(), requestController.rejectRequest);
+router.put('/acceptRequest', upload.none(), authenticateToken, requestController.acceptRequest);
+router.put('/rejectRequest', upload.none(), authenticateToken, requestController.rejectRequest);
 
-router.get('/getFriendList', requestController.getFriendList);
+router.get('/getFriendList', authenticateToken, requestController.getFriendList);
 
 module.exports = router;

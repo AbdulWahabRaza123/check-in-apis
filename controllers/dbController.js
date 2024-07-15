@@ -2,6 +2,7 @@ const User = require('../models/User');
 const UserCheckIn = require('../models/UserCheckIn');
 const UserPicture = require('../models/UserPicture');
 const Venue = require('../models/Venue');
+const sequelize = require('../config/database');
 
 // Mapping of table names to models
 const tableModels = {
@@ -65,5 +66,18 @@ exports.clearTable = async (req, res) => {
     res.status(200).json({ message: `All data in table ${tableName} cleared successfully` });
   } catch (error) {
     res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
+exports.queryDb = async (query, replacements) => {
+  try {
+    const results = await sequelize.query(query, {
+      replacements,
+      type: sequelize.QueryTypes.SELECT
+    });
+    return results;
+  } catch (error) {
+    console.error('Error executing query:', error);
+    throw error;
   }
 };
