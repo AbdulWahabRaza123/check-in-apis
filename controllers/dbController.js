@@ -2,14 +2,17 @@ const User = require('../models/User');
 const UserCheckIn = require('../models/UserCheckIn');
 const UserPicture = require('../models/UserPicture');
 const Venue = require('../models/Venue');
+const Request = require('../models/Request');
 const sequelize = require('../config/database');
 
 // Mapping of table names to models
 const tableModels = {
+  requests: Request,
   users: User,
   userCheckIns: UserCheckIn,
   userPictures: UserPicture,
   venues: Venue,
+  
 };
 
 exports.deleteAllUsers = async (req, res) => {
@@ -25,9 +28,10 @@ exports.deleteAllUsers = async (req, res) => {
 
 exports.deleteAllTables = async (req, res) => {
   try {
-    await User.drop();
+    await Request.drop();
     await UserCheckIn.drop();
     await UserPicture.drop();
+    await User.drop();
     await Venue.drop();
     res.status(200).json({ message: 'All tables deleted successfully' });
   } catch (error) {

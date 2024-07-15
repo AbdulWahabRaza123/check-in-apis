@@ -4,6 +4,8 @@ const sequelize = require('../config/database');
 const UserPicture = require('./UserPicture');
 const Request = require('./Request');
 const Message = require('./Message');
+const Voucher = require('./Voucher');
+const UserVoucher = require('./UserVoucher');
 
 const User = sequelize.define('User', {
   id: {
@@ -46,8 +48,10 @@ const User = sequelize.define('User', {
   age: {
     type: DataTypes.INTEGER,
   },
+  subscribed: {
+    type: DataTypes.BOOLEAN,
+  }
 });
-
 User.hasMany(UserPicture, { foreignKey: 'userId' });
 UserPicture.belongsTo(User, { foreignKey: 'userId' });
 

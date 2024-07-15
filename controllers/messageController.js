@@ -130,7 +130,7 @@ exports.getRecentMessages = async (req, res) => {
 
     if (messages.length > 0) {
       const userPromises = messages.map(async (message) => {
-        const userQuery = `SELECT * FROM Users WHERE id = ?`;
+        const userQuery = `SELECT * FROM User WHERE id = ?`;
         if (user_id == message.from_user) {
           const user = await DBController.queryDb(userQuery, [message.to_user]);
           return {
