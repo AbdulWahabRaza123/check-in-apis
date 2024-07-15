@@ -8,7 +8,8 @@ const PaymentHistory = require('../models/PaymentHistory');
 
 const bcrypt = require('bcryptjs');
 const cloudinary = require('cloudinary').v2;
-const {generateToken} = require('../utils/utils');
+const { generateToken } = require('../utils/utils');
+const { body, validationResult } = require('express-validator');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -16,40 +17,88 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Route validation middleware
+exports.validate = (method) => {
+  switch (method) {
+    case 'addVoucher': {
+      return [
+        body('name').notEmpty().withMessage('Name is required'),
+        body('description').notEmpty().withMessage('Description is required'),
+        body('expiryDays').isInt({ min: 1 }).withMessage('Expiry days must be a positive integer')
+      ];
+    }
+    case 'addSubscription': {
+      return [
+        body('userId').notEmpty().withMessage('User ID is required'),
+        body('voucherId').notEmpty().withMessage('Voucher ID is required')
+      ];
+    }
+    case 'addPayment': {
+      return [
+        body('date').notEmpty().withMessage('Date is required'),
+        body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be a positive number'),
+        body('reason').notEmpty().withMessage('Reason is required'),
+        body('userId').notEmpty().withMessage('User ID is required'),
+        body('voucherId').notEmpty().withMessage('Voucher ID is required')
+      ];
+    }
+    case 'signUp': {
+      return [
+        body('UId').notEmpty().withMessage('User ID is required'),
+        body('name').notEmpty().withMessage('Name is required'),
+        body('email').isEmail().withMessage('Valid email is required')
+      ];
+    }
+  }
+};
+
 exports.addVoucher = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ status: false, errors: errors.array() });
+  }
+
   try {
-    const {name, description, expiryDays} = req.body;
-    
-    const voucherExists = await Voucher.findOne({where: {name}});
+    const { name, description, expiryDays } = req.body;
+
+    const voucherExists = await Voucher.findOne({ where: { name } });
 
     if (voucherExists) {
-      return res.status(409).json({status: false, message: "Voucher already exists"});
+      return res.status(409).json({ status: false, message: "Voucher already exists" });
     }
-    
+
     const voucher = await Voucher.create({
       name,
       description,
       expiryTime: expiryDays,
     });
 
-    return res.status(201).json({status: true, message: "Voucher Created Successfully", voucher});
+    return res.status(201).json({ status: true, message: "Voucher Created Successfully", voucher });
   } catch (error) {
-    res.status(500).json({ status: false, message: 'Internal Server Error', error: error.message });      
+    if (error.name === 'SequelizeConnectionError') {
+      return res.status(503).json({ status: false, message: 'Service Unavailable', error: error.message });
+    }
+    res.status(500).json({ status: false, message: 'Internal Server Error', error: error.message });
   }
 };
 
 exports.addSubscription = async (req, res) => {
-  try {
-    const {userId, voucherId} = req.body;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ status: false, errors: errors.array() });
+  }
 
-    const userExists = await User.findOne({where: {UId: userId}});
-    const voucherExists = await Voucher.findOne({where: {id: voucherId}});
+  try {
+    const { userId, voucherId } = req.body;
+
+    const userExists = await User.findOne({ where: { UId: userId } });
+    const voucherExists = await Voucher.findOne({ where: { id: voucherId } });
 
     if (!voucherExists || !userExists) {
-      return res.status(404).json({ status: false, message: 'User or Voucher does not exist' });  
+      return res.status(404).json({ status: false, message: 'User or Voucher does not exist' });
     }
 
-    await userExists.update({subscribed: true});
+    await userExists.update({ subscribed: true });
     const createdSubscription = await UserVoucher.create({
       userId: userExists.id,
       voucherId: voucherExists.id,
@@ -57,23 +106,27 @@ exports.addSubscription = async (req, res) => {
 
     return res.status(201).json({ status: true, message: 'Successfully Subscribed', createdSubscription });
   } catch (error) {
-    res.status(500).json({ status: false, message: 'Internal Server Error', error: error.message });      
+    if (error.name === 'SequelizeConnectionError') {
+      return res.status(503).json({ status: false, message: 'Service Unavailable', error: error.message });
+    }
+    res.status(500).json({ status: false, message: 'Internal Server Error', error: error.message });
   }
 };
 
 exports.addPayment = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ status: false, errors: errors.array() });
+  }
+
   try {
-    const {date, amount, reason, userId, voucherId} = req.body;
+    const { date, amount, reason, userId, voucherId } = req.body;
 
-    if (!date || !amount || !reason || !userId || !voucherId) {
-      return res.status(400).json({ status: false, message: 'Missing required attributes (date, amount, reason, userId, voucherId)' });
-    }
-
-    const userExists = await User.findOne({where: {UId: userId}});
-    const voucherExists = await Voucher.findOne({where: {id: voucherId}});
+    const userExists = await User.findOne({ where: { UId: userId } });
+    const voucherExists = await Voucher.findOne({ where: { id: voucherId } });
 
     if (!voucherExists || !userExists) {
-      return res.status(404).json({ status: false, message: 'User or Voucher does not exist' });  
+      return res.status(404).json({ status: false, message: 'User or Voucher does not exist' });
     }
 
     const payment = await PaymentHistory.create({
@@ -84,13 +137,21 @@ exports.addPayment = async (req, res) => {
       voucherId: voucherId
     });
 
-    return res.status(201).json({status: true, message: "Payment Added Successfully", payment});
+    return res.status(201).json({ status: true, message: "Payment Added Successfully", payment });
   } catch (error) {
-    res.status(500).json({ status: false, message: 'Internal Server Error', error: error.message });    
+    if (error.name === 'SequelizeConnectionError') {
+      return res.status(503).json({ status: false, message: 'Service Unavailable', error: error.message });
+    }
+    res.status(500).json({ status: false, message: 'Internal Server Error', error: error.message });
   }
 };
 
 exports.signUp = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ status: false, errors: errors.array() });
+  }
+
   try {
     const {
       UId,
@@ -143,6 +204,9 @@ exports.signUp = async (req, res) => {
     res.status(200).json({ status: true, message: 'User signed up successfully', token });
 
   } catch (error) {
+    if (error.name === 'SequelizeConnectionError') {
+      return res.status(503).json({ status: false, message: 'Service Unavailable', error: error.message });
+    }
     res.status(500).json({ status: false, message: 'Internal Server Error', error: error.message });
   }
 };
@@ -180,6 +244,9 @@ exports.getUsers = async (req, res) => {
       });
     }
   } catch (error) {
+    if (error.name === 'SequelizeConnectionError') {
+      return res.status(503).json({ status: false, message: 'Service Unavailable', error: error.message });
+    }
     res.status(500).json({ status: false, message: 'Internal Server Error', error: error.message });
   }
 };
