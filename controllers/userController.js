@@ -16,99 +16,80 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-exports.addVoucher = async (req, res) =>{
+exports.addVoucher = async (req, res) => {
   try {
     const {name, description, expiryDays} = req.body;
     
     const voucherExists = await Voucher.findOne({where: {name}});
 
-    if(!voucherExists)
-    {
-      const voucher = await Voucher.create({
-        name,
-        description,
-        expiryTime: expiryDays,
-      });
-
-      if(voucher)
-      {
-        return res.status(201).json({status: true, message: "Voucher Created Successfully", voucher});
-      }
+    if (voucherExists) {
+      return res.status(409).json({status: false, message: "Voucher already exists"});
     }
     
-    return res.status(500).json({status: false, message: "Could not Create Voucher"});
+    const voucher = await Voucher.create({
+      name,
+      description,
+      expiryTime: expiryDays,
+    });
+
+    return res.status(201).json({status: true, message: "Voucher Created Successfully", voucher});
   } catch (error) {
-    res.status(500).json({ status: false, message: 'Could not Add Subscription', error: error.message });      
+    res.status(500).json({ status: false, message: 'Internal Server Error', error: error.message });      
   }
 };
 
-exports.addSubscription = async (req, res) =>{
-    try {
-      const {userId, voucherId} =  req.body;
-
-      const userExists = await User.findOne({where: {UId: userId}});
-      const voucherExists = await Voucher.findOne({where: {voucherId: voucherId}});
-
-      if(!voucherExists || !userExists)
-      {
-        return res.status(404).json({ status: false, message: 'User or Voucher does not Exist'});  
-      }
-
-      userExists.update({subscribed: true});
-      const createdSubscription = await UserVoucher.create({
-        userId: userExists.id,
-        voucherId: voucherExists.id,
-      });
-
-      if(createdSubscription)
-      {
-        return res.status(201).json({ status: true, message: 'Successfully Subscribed', createdSubscription});        
-      }
-      else{
-        res.status(500).json({ status: false, message: 'Could not Add Subscription' });        
-      }
-
-    } catch (error) {
-      res.status(500).json({ status: false, message: 'Could not Add Subscription', error: error.message });      
-    }
-};
-
-exports.addPayment = async(req, res) =>{
+exports.addSubscription = async (req, res) => {
   try {
-      const {date, amount, reason, userId, voucherId} = req.body;
+    const {userId, voucherId} = req.body;
 
-      if(!date || !amount || !reason || !userId || !voucherId)
-      {
-        return res.status(500).json({ status: false, message: 'Add all the Attributes (date, amount, reason, userId, voucherId)'});
-      }
+    const userExists = await User.findOne({where: {UId: userId}});
+    const voucherExists = await Voucher.findOne({where: {id: voucherId}});
 
-      const userExists = await User.findOne({where: {UId: userId}});
-      const voucherExists = await Voucher.findOne({where: {voucherId: voucherId}});
+    if (!voucherExists || !userExists) {
+      return res.status(404).json({ status: false, message: 'User or Voucher does not exist' });  
+    }
 
-      if(!voucherExists || !userExists)
-      {
-        return res.status(404).json({ status: false, message: 'User or Voucher does not Exist'});  
-      }
+    await userExists.update({subscribed: true});
+    const createdSubscription = await UserVoucher.create({
+      userId: userExists.id,
+      voucherId: voucherExists.id,
+    });
 
-      const payment = await PaymentHistory.create({
-        date,
-        reason,
-        amount,
-        userId: userExists.id,
-        voucherId: voucherId
-      });
-
-      if(payment)
-      {
-        return res.status(201).json({status: true, message: "Payment Added Successfully", payment});
-      }
-
-      res.status(500).json({ status: false, message: 'Could not Add Payment'});
-
+    return res.status(201).json({ status: true, message: 'Successfully Subscribed', createdSubscription });
   } catch (error) {
-    res.status(500).json({ status: false, message: 'Could not Add Payment', error: error.message });    
+    res.status(500).json({ status: false, message: 'Internal Server Error', error: error.message });      
   }
 };
+
+exports.addPayment = async (req, res) => {
+  try {
+    const {date, amount, reason, userId, voucherId} = req.body;
+
+    if (!date || !amount || !reason || !userId || !voucherId) {
+      return res.status(400).json({ status: false, message: 'Missing required attributes (date, amount, reason, userId, voucherId)' });
+    }
+
+    const userExists = await User.findOne({where: {UId: userId}});
+    const voucherExists = await Voucher.findOne({where: {id: voucherId}});
+
+    if (!voucherExists || !userExists) {
+      return res.status(404).json({ status: false, message: 'User or Voucher does not exist' });  
+    }
+
+    const payment = await PaymentHistory.create({
+      date,
+      reason,
+      amount,
+      userId: userExists.id,
+      voucherId: voucherId
+    });
+
+    return res.status(201).json({status: true, message: "Payment Added Successfully", payment});
+  } catch (error) {
+    res.status(500).json({ status: false, message: 'Internal Server Error', error: error.message });    
+  }
+};
+
 exports.signUp = async (req, res) => {
   try {
     const {
@@ -125,7 +106,7 @@ exports.signUp = async (req, res) => {
       age,
     } = req.body;
 
-    const userExists = await User.findOne({ where: { UId }, include: [UserPicture], });
+    const userExists = await User.findOne({ where: { UId }, include: [UserPicture] });
 
     if (userExists) {
       return res.status(409).json({ status: false, message: 'User already exists' });
@@ -159,10 +140,10 @@ exports.signUp = async (req, res) => {
 
     const token = generateToken(email);
 
-    res.status(200).json({ status: true, message: 'User signed up successfully', "token": token });
+    res.status(200).json({ status: true, message: 'User signed up successfully', token });
 
   } catch (error) {
-    res.status(500).json({ status: false, message: 'File uploading failed for user', error: error.message });
+    res.status(500).json({ status: false, message: 'Internal Server Error', error: error.message });
   }
 };
 
@@ -182,7 +163,7 @@ exports.getUsers = async (req, res) => {
           user,
         });
       } else {
-        return res.status(200).json({
+        return res.status(404).json({
           status: false,
           message: 'User does not exist',
           user: [],
@@ -199,6 +180,6 @@ exports.getUsers = async (req, res) => {
       });
     }
   } catch (error) {
-    res.status(500).json({ status: false, message: 'Internal server error', error: error.message });
+    res.status(500).json({ status: false, message: 'Internal Server Error', error: error.message });
   }
 };
