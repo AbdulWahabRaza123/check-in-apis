@@ -18,23 +18,26 @@ exports.sendmessage = async (req, res) => {
     const user2Exists = await User.findOne({ where: { UId: to } });
 
     if (user1Exists && user2Exists) {
-
-      sendMessage(app_id, user1Exists.id, user2Exists.id, message, (err, newMessage) => {
-        if (err) {
-          return res
-            .status(500)
-            .json({
+      sendMessage(
+        app_id,
+        user1Exists.id,
+        user2Exists.id,
+        message,
+        (err, newMessage) => {
+          if (err) {
+            return res.status(500).json({
               status: false,
               message: "Could not send Message",
               error: err.message,
             });
+          }
+          res.status(200).json({
+            status: "true",
+            message: "Message Sent Successfully",
+            newMessage,
+          });
         }
-        res.status(200).json({
-          status: "true",
-          message: "Message Sent Successfully",
-          newMessage,
-        });
-      });
+      );
     } else {
       return res.status(404).json({
         status: false,
@@ -42,13 +45,11 @@ exports.sendmessage = async (req, res) => {
       });
     }
   } catch (error) {
-    return res
-      .status(500)
-      .json({
-        status: false,
-        message: "Error Sending the Message",
-        error: error.message,
-      });
+    return res.status(500).json({
+      status: false,
+      message: "Error Sending the Message",
+      error: error.message,
+    });
   }
 };
 
@@ -126,7 +127,11 @@ exports.getRecentMessages = async (req, res) => {
       ORDER BY timestamp DESC;
     `;
 
-    const messages = await DBController.queryDb(query, [app_id, userExists.id, userExists.id]);
+    const messages = await DBController.queryDb(query, [
+      app_id,
+      userExists.id,
+      userExists.id,
+    ]);
 
     if (messages.length > 0) {
       const userPromises = messages.map(async (message) => {
@@ -138,7 +143,9 @@ exports.getRecentMessages = async (req, res) => {
             user: user[0],
           };
         } else {
-          const user = await DBController.queryDb(userQuery, [message.from_user]);
+          const user = await DBController.queryDb(userQuery, [
+            message.from_user,
+          ]);
           return {
             ...message,
             user: user[0],

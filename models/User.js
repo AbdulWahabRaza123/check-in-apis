@@ -1,13 +1,11 @@
 // models/User.js
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
-const UserPicture = require('./UserPicture');
-const Request = require('./Request');
-const Message = require('./Message');
-const Voucher = require('./Voucher');
-const UserVoucher = require('./UserVoucher');
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
+const UserPicture = require("./UserPicture");
+const Request = require("./Request");
+const Message = require("./Message");
 
-const User = sequelize.define('User', {
+const User = sequelize.define("User", {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -50,22 +48,53 @@ const User = sequelize.define('User', {
   },
   subscribed: {
     type: DataTypes.BOOLEAN,
-  }
+  },
 });
-User.hasMany(UserPicture, { foreignKey: 'userId' });
-UserPicture.belongsTo(User, { foreignKey: 'userId' });
+User.hasMany(UserPicture, { foreignKey: "userId" });
+UserPicture.belongsTo(User, { foreignKey: "userId" });
 
 //Associations with Request Table
-User.hasMany(Request, { as: 'SentRequests', foreignKey: 'sender_id', onDelete: 'CASCADE' });
-User.hasMany(Request, { as: 'ReceivedRequests', foreignKey: 'receiver_id', onDelete: 'CASCADE' });
-Request.belongsTo(User, { as: 'Sender', foreignKey: 'sender_id', onDelete: 'CASCADE' });
-Request.belongsTo(User, { as: 'Receiver', foreignKey: 'receiver_id', onDelete: 'CASCADE' });
+User.hasMany(Request, {
+  as: "SentRequests",
+  foreignKey: "sender_id",
+  onDelete: "CASCADE",
+});
+User.hasMany(Request, {
+  as: "ReceivedRequests",
+  foreignKey: "receiver_id",
+  onDelete: "CASCADE",
+});
+Request.belongsTo(User, {
+  as: "Sender",
+  foreignKey: "sender_id",
+  onDelete: "CASCADE",
+});
+Request.belongsTo(User, {
+  as: "Receiver",
+  foreignKey: "receiver_id",
+  onDelete: "CASCADE",
+});
 
 //Associations with Messages Table
-User.hasMany(Message, { as: 'SentMessages', foreignKey: 'from_user', onDelete: 'CASCADE' });
-User.hasMany(Message, { as: 'ReceivedMessages', foreignKey: 'to_user', onDelete: 'CASCADE' });
-Message.belongsTo(User, { as: 'Sender', foreignKey: 'from_user', onDelete: 'CASCADE' });
-Message.belongsTo(User, { as: 'Receiver', foreignKey: 'to_user', onDelete: 'CASCADE' });
-
+User.hasMany(Message, {
+  as: "SentMessages",
+  foreignKey: "from_user",
+  onDelete: "CASCADE",
+});
+User.hasMany(Message, {
+  as: "ReceivedMessages",
+  foreignKey: "to_user",
+  onDelete: "CASCADE",
+});
+Message.belongsTo(User, {
+  as: "Sender",
+  foreignKey: "from_user",
+  onDelete: "CASCADE",
+});
+Message.belongsTo(User, {
+  as: "Receiver",
+  foreignKey: "to_user",
+  onDelete: "CASCADE",
+});
 
 module.exports = User;
